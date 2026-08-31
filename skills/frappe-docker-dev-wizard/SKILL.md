@@ -39,12 +39,33 @@ Use this skill when working on `setup-frappe-dev.sh`, the README setup flow, or 
 
 ## Networking Rules
 
-- Reserve six Frappe host ports mapped to container `8000-8005`.
-- Reserve six Socket.IO host ports mapped to container `9000-9005`.
+- Reserve six Frappe ports and map each host port to the identical container port.
+- Reserve six Socket.IO ports and map each host port to the identical container port.
+- Pass all four port-range values into the Frappe container. Bench must use the
+  selected Frappe and Socket.IO start ports as its internal listener ports.
 - Auto-detect should skip ports already listening on the host or published by Docker.
 - Prefer starts near `8000` and `9000`, then scan upward in predictable ranges.
 - `PROJECT_IP_NUMBER` must be `0-255` and should avoid existing Docker networks using `10.88.<n>.0/24`.
 - Warn if manually chosen ports/subnet appear occupied, but allow intentional override after confirmation.
+
+## Bench Runtime Rules
+
+- Keep the heavy bootstrap behavior in the versioned startup scripts and their
+  shared helper; do not move it into the host-side wizard.
+- Validate `FRAPPE_PORT_START`, `FRAPPE_PORT_END`, `SOCKETIO_PORT_START`, and
+  `SOCKETIO_PORT_END` before installing dependencies.
+- Set global Bench `webserver_port` and `socketio_port` from the selected range
+  starts on every fresh or resumed run.
+- Generate the Procfile web command with the selected Frappe start port.
+- Load `$HOME/.nvm/nvm.sh` before resolving or running Node. Never hardcode a
+  versioned NVM path in the Procfile; write the absolute result of
+  `command -v node` after the versioned script selects Node.
+- Re-sourcing a startup script must skip an existing valid Bench and site.
+- If the persisted `env/bin/python` is missing, broken, or has a different
+  major/minor version, replace only `frappe-bench/env`, reinstall requirements,
+  and restore the previous environment if rebuilding fails.
+- Runtime recovery must preserve apps, sites, custom code, workspace content,
+  site configuration, and MariaDB data.
 
 ## Styling Guidance
 
@@ -92,7 +113,11 @@ Use this skill when working on `setup-frappe-dev.sh`, the README setup flow, or 
 Run the checks that match the change:
 
 ```bash
-bash -n setup-frappe-dev.sh
+bash -n setup-frappe-dev.sh frappe-startup-scripts/*.sh tests/test-startup-common.sh
+```
+
+```bash
+bash tests/test-startup-common.sh
 ```
 
 ```bash
@@ -100,13 +125,15 @@ printf 'codex-test\n\n1\nN\n' | NO_COLOR=1 ./setup-frappe-dev.sh
 ```
 
 ```bash
+FRAPPE_PORT_START=8060 FRAPPE_PORT_END=8065 \
+SOCKETIO_PORT_START=9060 SOCKETIO_PORT_END=9065 \
 docker compose --env-file ./.env config
 ```
 
 If available:
 
 ```bash
-shellcheck setup-frappe-dev.sh
+shellcheck setup-frappe-dev.sh frappe-startup-scripts/*.sh tests/test-startup-common.sh
 ```
 
 For behavior changes, manually verify:
@@ -120,3 +147,11 @@ For behavior changes, manually verify:
 - `NO_SOUND=1` suppresses sound.
 - Non-interactive/piped runs do not sleep for the splash animation.
 - Compose config no longer references missing unversioned `frappe-bench-startup.sh`.
+- Compose publishes `8060-8065` to container `8060-8065` and `9060-9065` to
+  container `9060-9065`, and passes all four values into the Frappe service.
+- Procfile generation preserves worker/watch/scheduler entries while replacing
+  web and Socket.IO commands.
+- A broken or mismatched Bench Python environment is rebuilt without changing
+  apps or sites; a compatible environment is retained.
+- The startup helper reports a clear error when Node remains unavailable after
+  loading NVM.

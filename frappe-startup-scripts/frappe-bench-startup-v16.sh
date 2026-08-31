@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# shellcheck source=frappe-bench-startup-common.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/frappe-bench-startup-common.sh"
+frappe_validate_ports || return 1
+
 sudo chown frappe:frappe ../workspace
 
 echo "alias ll='ls -al'" >> ~/.bashrc
@@ -11,10 +15,11 @@ sudo apt update
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 
 export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+frappe_load_nvm || return 1
 
 echo "installing Node v24"
-source ~/.nvm/nvm.sh && nvm deactivate && nvm install 24 && nvm use 24 && nvm alias default 24 && nvm alias default node
+nvm deactivate && nvm install 24 && nvm use 24 && nvm alias default 24 && nvm alias default node || return 1
+frappe_resolve_node || return 1
 
 
 npm install -g yarn@1.22.19
@@ -45,26 +50,5 @@ pyenv global 3.14
 
 pip install frappe-bench
 
-# initialize bench
-bench init --skip-redis-config-generation --python "/home/frappe/.pyenv/shims/python" --frappe-branch version-16 frappe-bench --verbose
-
-cd frappe-bench
-
-# setup all requirements
-bench setup requirements
-
-bench set-mariadb-host $MARIADB_CONTAINER_NAME
-bench set-redis-cache-host $REDIS_CACHE_CONTAINER_NAME:6379
-bench set-redis-queue-host $REDIS_QUEUE_CONTAINER_NAME:6379
-bench set-redis-socketio-host $REDIS_SOCKETIO_CONTAINER_NAME:6379
-
-# set line endings
-cd apps/frappe/
-git config core.autocrlf input
-git config core.filemode false
-
-# create a new site
-bench new-site $SITE_NAME --mariadb-root-password root --admin-password administrator --no-mariadb-socket --db-name erpnext --verbose
-bench --site $SITE_NAME set-config developer_mode 1
-bench --site $SITE_NAME clear-cache
-bench use $SITE_NAME
+frappe_prepare_bench 16 "/home/frappe/.pyenv/shims/python" || return 1
+frappe_configure_bench || return 1

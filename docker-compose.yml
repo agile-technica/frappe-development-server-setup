@@ -10,6 +10,10 @@ services:
       - REDIS_QUEUE_CONTAINER_NAME=${REDIS_QUEUE_CONTAINER_NAME}
       - REDIS_SOCKETIO_CONTAINER_NAME=${REDIS_SOCKETIO_CONTAINER_NAME}
       - SITE_NAME=${SITE_NAME}
+      - FRAPPE_PORT_START=${FRAPPE_PORT_START}
+      - FRAPPE_PORT_END=${FRAPPE_PORT_END}
+      - SOCKETIO_PORT_START=${SOCKETIO_PORT_START}
+      - SOCKETIO_PORT_END=${SOCKETIO_PORT_END}
     image: frappe/bench:latest
     command: >
       sh -c "cp /opt/frappe-startup-scripts/*.sh /workspace/ &&
@@ -26,8 +30,8 @@ services:
 
     working_dir: /workspace
     ports:
-      - "${FRAPPE_PORT_START}-${FRAPPE_PORT_END}:8000-8005"
-      - "${SOCKETIO_PORT_START}-${SOCKETIO_PORT_END}:9000-9005"
+      - "${FRAPPE_PORT_START}-${FRAPPE_PORT_END}:${FRAPPE_PORT_START}-${FRAPPE_PORT_END}"
+      - "${SOCKETIO_PORT_START}-${SOCKETIO_PORT_END}:${SOCKETIO_PORT_START}-${SOCKETIO_PORT_END}"
   mariadb:
     container_name: "${MARIADB_CONTAINER_NAME}"
     build: ./custom-mariadb/

@@ -717,8 +717,8 @@ version_screen() {
 }
 
 network_summary() {
-  printf '  Frappe ports    : %s-%s -> 8000-8005\n' "$FRAPPE_PORT_START" "$FRAPPE_PORT_END"
-  printf '  Socket.IO ports : %s-%s -> 9000-9005\n' "$SOCKETIO_PORT_START" "$SOCKETIO_PORT_END"
+  printf '  Frappe ports    : %s-%s (host and container)\n' "$FRAPPE_PORT_START" "$FRAPPE_PORT_END"
+  printf '  Socket.IO ports : %s-%s (host and container)\n' "$SOCKETIO_PORT_START" "$SOCKETIO_PORT_END"
   printf '  Docker subnet   : 10.88.%s.0/24\n' "$PROJECT_IP_NUMBER"
 }
 
